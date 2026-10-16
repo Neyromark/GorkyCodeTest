@@ -1,0 +1,12 @@
+[submodule "MAX-Bot"]
+	path = MAX-Bot
+	url = https://github.com/Neyromark/GorkyCodeTest-MAX-Bot.git
+[submodule "Notifications"]
+	path = Notifications
+	url = https://github.com/Neyromark/GorkyCodeTest-Notifications.git
+[submodule "Database"]
+	path = Database
+	url = https://github.com/Neyromark/GorkyCodeTest-Database.git
+[submodule "Backend"]
+	path = Backend
+	url = https://github.com/Neyromark/GorkyCodeTest-Backend.git
