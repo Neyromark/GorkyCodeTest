@@ -1,10 +1,10 @@
 name: GorkyCodeTest
 
 include:
-  - path: ./Backend/docker-compose.yml
-  - path: ./Database/docker-compose.yml
+  # - path: ./Backend/docker-compose.yml
+  # - path: ./Database/docker-compose.yml
   - path: ./MAX-Bot/docker-compose.yml
-  - path: ./Notifications/docker-compose.yml
+  # - path: ./Notifications/docker-compose.yml
 
 networks:
   app-network:
