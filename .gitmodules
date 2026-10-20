@@ -1,6 +1,3 @@
-[submodule "MAX-Bot"]
-	path = MAX-Bot
-	url = https://github.com/Neyromark/GorkyCodeTest-MAX-Bot.git
 [submodule "Notifications"]
 	path = Notifications
 	url = https://github.com/Neyromark/GorkyCodeTest-Notifications.git
