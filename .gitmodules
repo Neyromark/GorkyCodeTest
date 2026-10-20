@@ -7,3 +7,6 @@
 [submodule "Backend"]
 	path = Backend
 	url = https://github.com/Neyromark/GorkyCodeTest-Backend.git
+[submodule "VK-Bot"]
+	path = VK-Bot
+	url = https://github.com/Neyromark/GorkyCodeTest-VK-Bot.git
