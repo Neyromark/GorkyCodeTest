@@ -4,8 +4,10 @@
 #  Как это работает:
 #    1. При пуше в ветку main GitHub запускает этот workflow
 #    2. Сначала проверяется валидность docker-compose.yml
+#       (репозиторий выкачивается вместе со всеми подмодулями)
 #    3. Workflow по SSH заходит на ваш сервер
 #    4. На сервере: git pull актуальной ветки ->
+#       git submodule update --init --recursive ->
 #       docker compose up -d --build (сборка прямо на сервере)
 #
 #  Что нужно настроить (подробно — в README-DEPLOY.md):
@@ -54,8 +56,17 @@ jobs:
 
     steps:
       # ---------- 1. Быстрая проверка compose-файла до деплоя ----------
-      - name: Checkout
+      - name: Checkout (with submodules)
         uses: actions/checkout@v4
+        with:
+          # recursive — подмодули всех уровней вложенности, а не только первого.
+          # Если подмодулей нет, этот параметр ни на что не влияет.
+          submodules: recursive
+          # Для ПРИВАТНЫХ подмодулей стандартного GITHUB_TOKEN может не хватить
+          # (он даёт доступ только к текущему репозиторию). В этом случае
+          # создайте PAT с доступом к репозиториям подмодулей, сохраните его
+          # в секрет SUBMODULES_TOKEN и раскомментируйте строку ниже:
+          # token: ${{ secrets.SUBMODULES_TOKEN }}
 
       - name: Validate docker-compose.yml
         run: |
@@ -94,7 +105,8 @@ jobs:
             if [ ! -d "$DEPLOY_PATH/.git" ]; then
               echo "📥 Проект ещё не склонирован, клонирую..."
               mkdir -p "$(dirname "$DEPLOY_PATH")"
-              git clone --branch "$BRANCH_NAME" \
+              # --recurse-submodules: подмодули подтянутся сразу при клонировании
+              git clone --recurse-submodules --jobs 8 --branch "$BRANCH_NAME" \
                 "https://github.com/${REPOSITORY}.git" "$DEPLOY_PATH"
             fi
 
@@ -107,6 +119,21 @@ jobs:
             git fetch --prune origin
             git reset --hard "origin/$BRANCH_NAME"
             git log -1 --oneline
+
+            # --- Подмодули: инициализируем и обновляем до коммитов, ---
+            # --- записанных в основном репозитории (включая вложенные) ---
+            # sync       — подхватить изменившиеся URL из .gitmodules
+            # update     — склонировать отсутствующие и переключить на нужный коммит
+            # --force    — отбрасывать случайные локальные правки в подмодулях
+            # Если подмодулей нет (.gitmodules отсутствует) — блок просто пропускается.
+            if [ -f .gitmodules ]; then
+              echo "🧩 Обновляю подмодули..."
+              git submodule sync --recursive
+              git submodule update --init --recursive --force --jobs 8
+              git submodule status --recursive
+            else
+              echo "🧩 Подмодулей нет (.gitmodules не найден), пропускаю"
+            fi
 
             # --- Проверяем наличие production .env (если он нужен проекту) ---
             if [ ! -f .env ] && [ -f .env.example ]; then
