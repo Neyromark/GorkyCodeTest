@@ -1,0 +1,142 @@
+# ============================================================
+#  Деплой проекта на сервер через Docker Compose (по SSH)
+# ------------------------------------------------------------
+#  Как это работает:
+#    1. При пуше в ветку main GitHub запускает этот workflow
+#    2. Сначала проверяется валидность docker-compose.yml
+#    3. Workflow по SSH заходит на ваш сервер
+#    4. На сервере: git pull актуальной ветки ->
+#       docker compose up -d --build (сборка прямо на сервере)
+#
+#  Что нужно настроить (подробно — в README-DEPLOY.md):
+#    GitHub -> Settings -> Secrets and variables -> Actions
+#
+#    Secrets (вкладка Secrets):
+#      SERVER_HOST     — IP или домен сервера, напр. 203.0.113.10
+#      SERVER_USER     — пользователь SSH, напр. deploy или ubuntu
+#      SERVER_SSH_KEY  — приватный SSH-ключ целиком (с -----BEGIN...)
+#      SERVER_PORT     — (необязательно) порт SSH, если не 22
+#
+#    Variables (вкладка Variables):
+#      DEPLOY_PATH     — папка проекта на сервере, напр. /opt/myapp
+#                        (если не задана, используется /opt/app)
+# ============================================================
+
+name: Deploy to server
+
+on:
+  push:
+    branches: [main]
+  # Ручной запуск: вкладка Actions -> Deploy to server -> Run workflow
+  workflow_dispatch:
+
+# Не даём двум деплоям одновременно работать на одном сервере
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  DEPLOY_PATH: ${{ vars.DEPLOY_PATH }}
+  BRANCH_NAME: ${{ github.ref_name }}
+  REPOSITORY: ${{ github.repository }}
+
+jobs:
+  deploy:
+    name: Deploy via SSH + Docker Compose
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # Необязательно, но удобно: в Settings -> Environments можно
+    # создать окружение production и требовать ручное подтверждение деплоя
+    environment: production
+
+    steps:
+      # ---------- 1. Быстрая проверка compose-файла до деплоя ----------
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate docker-compose.yml
+        run: |
+          if [ ! -f docker-compose.yml ] && [ ! -f compose.yml ]; then
+            echo "::error::В корне репозитория нет docker-compose.yml / compose.yml"
+            exit 1
+          fi
+          # --no-interpolate: не падаем из-за переменных из .env,
+          # которого нет на раннере (он лежит только на сервере)
+          docker compose config --quiet --no-interpolate
+          echo "docker-compose.yml валиден ✅"
+
+      # ---------- 2. Деплой на сервер по SSH ----------
+      - name: Deploy to server via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          port: ${{ secrets.SERVER_PORT || 22 }}
+          # Останавливать workflow при первой же ошибке на сервере
+          script_stop: true
+          command_timeout: 25m
+          envs: DEPLOY_PATH,BRANCH_NAME,REPOSITORY
+          script: |
+            set -eu
+
+            DEPLOY_PATH="${DEPLOY_PATH:-/opt/app}"
+            echo "📂 Папка проекта на сервере: $DEPLOY_PATH"
+            echo "🌿 Ветка: $BRANCH_NAME"
+
+            # --- Первый запуск: если проекта на сервере ещё нет — клонируем ---
+            # Для приватного репозитория серверу нужен доступ к GitHub:
+            # добавьте на сервер Deploy key (см. README-DEPLOY.md, шаг 3)
+            # или склонируйте репозиторий вручную один раз до первого деплоя.
+            if [ ! -d "$DEPLOY_PATH/.git" ]; then
+              echo "📥 Проект ещё не склонирован, клонирую..."
+              mkdir -p "$(dirname "$DEPLOY_PATH")"
+              git clone --branch "$BRANCH_NAME" \
+                "https://github.com/${REPOSITORY}.git" "$DEPLOY_PATH"
+            fi
+
+            cd "$DEPLOY_PATH"
+
+            # --- Подтягиваем актуальный код ---
+            # reset --hard (а не pull): на деплой-сервере не должно быть
+            # локальных правок, зато так деплой не падает из-за конфликтов.
+            # Неотслеживаемые файлы (например, .env) при этом НЕ удаляются.
+            git fetch --prune origin
+            git reset --hard "origin/$BRANCH_NAME"
+            git log -1 --oneline
+
+            # --- Проверяем наличие production .env (если он нужен проекту) ---
+            if [ ! -f .env ] && [ -f .env.example ]; then
+              echo "⚠️  ВНИМАНИЕ: на сервере нет .env (есть только .env.example)."
+              echo "    Создайте .env на сервере вручную, иначе приложение может не стартовать."
+            fi
+
+            # --- Собираем и (пере)запускаем контейнеры ---
+            docker compose config --quiet
+            docker compose up -d --build --remove-orphans
+
+            # --- Даём контейнерам подняться и показываем статус ---
+            sleep 5
+            docker compose ps
+
+            # Если есть мгновенно упавшие контейнеры — покажем их логи в Actions
+            if docker compose ps --status exited --quiet | grep -q .; then
+              echo "⚠️  Есть остановленные контейнеры, последние логи:"
+              docker compose logs --tail=200 || true
+            fi
+
+            # --- Чистим висячие (dangling) образы, чтобы не забивать диск ---
+            # Именно -f без -a: старые тегированные образы останутся для отката
+            docker image prune -f
+
+            echo "✅ Деплой завершён: $(git rev-parse --short HEAD)"
+
+      # ---------- 3. Подсказка при падении ----------
+      - name: Show hint on failure
+        if: failure()
+        run: |
+          echo "::error::Деплой упал. Откройте шаг 'Deploy to server via SSH' выше — там логи с сервера."
+          echo "Быстрая диагностика на сервере: cd \$DEPLOY_PATH && docker compose ps && docker compose logs --tail=200"
