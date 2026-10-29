@@ -7,5 +7,5 @@ include:
   - path: ./Notifications/docker-compose.yml
 
 networks:
-  app-network:
+  app_network:
     driver: bridge
