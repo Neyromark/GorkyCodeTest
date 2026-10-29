@@ -1,12 +1,16 @@
 [submodule "Notifications"]
 	path = Notifications
 	url = https://github.com/Neyromark/GorkyCodeTest-Notifications.git
+	branch = main
 [submodule "Database"]
 	path = Database
 	url = https://github.com/Neyromark/GorkyCodeTest-Database.git
+	branch = main
 [submodule "Backend"]
 	path = Backend
 	url = https://github.com/Neyromark/GorkyCodeTest-Backend.git
+	branch = main
 [submodule "VK-Bot"]
 	path = VK-Bot
 	url = https://github.com/Neyromark/GorkyCodeTest-VK-Bot.git
+	branch = main

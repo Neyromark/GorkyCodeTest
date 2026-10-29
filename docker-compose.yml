@@ -4,8 +4,10 @@ include:
   # - path: ./Backend/docker-compose.yml
   - path: ./Database/docker-compose.yml
   - path: ./VK-Bot/docker-compose.yml
-  # - path: ./Notifications/docker-compose.yml
+  - path: ./Notifications/docker-compose.yml
 
 networks:
+  # Создаётся заранее: docker network create app-network
   app-network:
-    driver: bridge
+    external: true
+    name: app-network
