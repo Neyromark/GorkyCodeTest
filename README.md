@@ -70,26 +70,27 @@ cd GorkyCodeTest
 cp Database/.env.example       Database/.env
 cp Notifications/.env.example  Notifications/.env
 cp VK-Bot/.env.example         VK-Bot/.env
-# у Backend примера нет — создайте файл вручную (см. таблицу ниже)
-touch Backend/.env
+cp Backend/.env.example        Backend/.env
 ```
 
-Минимум, что нужно заполнить:
+В примерах уже прописаны адреса сервисов в сети `app-network` (`postgres`,
+`backend`, `vkbottle_bot`, `notifications`) и свободные порты, поэтому
+дозаполнить нужно только секреты:
 
 | Модуль | Переменная | Значение |
 | --- | --- | --- |
 | `Database` | `POSTGRES_PASSWORD` | Пароль БД (обязателен, иначе compose не стартует) |
 | `Database` | `POSTGRES_USER`, `POSTGRES_DB` | По умолчанию `postgres` / `tasks_db` |
 | `Notifications` | `POSTGRES_PASSWORD` | Тот же пароль, что и в `Database` |
-| `Notifications` | `APP_PORT` | Порт сервиса на хосте, по умолчанию `8000` |
+| `Notifications` | `APP_PORT` | Порт сервиса на хосте; в примере уже `8080` (8000 занят `Backend`) |
 | `VK-Bot` | `VK_TOKEN` | Токен сообщества ВК (Long Poll + сообщения) |
 | `VK-Bot` | `HOST`, `PORT` | Адрес бэкенда: в compose это `backend` и `8000` |
 | `Backend` | `CREDENTIAL` | Authorization key GigaChat (`GIGACHAT_API_PERS`) |
-| `Backend` | `DATABASE_URL` | `postgresql+psycopg://postgres:<пароль>@postgres:5432/tasks_db` |
+| `Backend` | `DATABASE_URL` | `postgresql+psycopg://postgres:<пароль>@postgres:5432/tasks_db` — хост `postgres`, пароль как в `Database/.env` |
 | `Backend` | `VK_BOT_URL`, `NOTIFICATIONS_URL` | По умолчанию `http://vkbottle_bot` и `http://notifications:8080` — менять не нужно |
 
-> Порт `8000` по умолчанию занимают и `Backend`, и `Notifications`.
-> Задайте в `Notifications/.env`, например, `APP_PORT=8080`.
+> Порт `8000` публикуют и `Backend`, и `Notifications` (у последнего по умолчанию).
+> В `Notifications/.env` уже стоит `APP_PORT=8080` — менять ничего не нужно.
 
 ### 2. Запуск
 
