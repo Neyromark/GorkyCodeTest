@@ -1,7 +1,7 @@
 name: GorkyCodeTest
 
 include:
-  # - path: ./Backend/docker-compose.yml
+  - path: ./Backend/docker-compose.yml
   - path: ./Database/docker-compose.yml
   - path: ./VK-Bot/docker-compose.yml
   - path: ./Notifications/docker-compose.yml
