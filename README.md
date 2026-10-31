@@ -12,7 +12,6 @@
   <img src="https://img.shields.io/badge/Python-3.12%2B-3776AB?logo=python&logoColor=white" alt="Python">
   <img src="https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white" alt="FastAPI">
   <img src="https://img.shields.io/badge/PostgreSQL-17-4169E1?logo=postgresql&logoColor=white" alt="PostgreSQL">
-  <img src="https://img.shields.io/badge/VK-Login%20Long-Poll-135844?logo=vk&logoColor=white" alt="VK">
   <img src="https://img.shields.io/badge/GigaChat-LLM-1501B6?logo=hcn&logoColor=white" alt="GigaChat">
   <img src="https://img.shields.io/badge/docker-Docker%20Compose-2496ED?logo=docker&logoColor=white" alt="Docker Compose">
 </p>
